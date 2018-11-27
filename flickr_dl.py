@@ -9,6 +9,7 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.common.exceptions import TimeoutException
 
 
 # TODO: get user arg strings for category and number to dl
@@ -17,34 +18,32 @@ num_to_dl = int(sys.argv[2])
 print('Searching "{}" on Flickr and downloading {} images.'.format(
       search_term, num_to_dl))
 
-# TODO: instantiate driver and get website
+# TODO: instantiate driver and get website + search
 driver = webdriver.Firefox()
-driver.get('https://www.flickr.com/')
-
-# TODO: find search element , input category & submit
-search_elem = driver.find_element_by_id('search-field')
-search_elem.send_keys(search_term)
-search_elem.send_keys(Keys.RETURN)
+driver.get('https://www.flickr.com/search/?text=' + search_term)
 
 # TODO: find and click first photo element
-photo_elem = WebDriverWait(driver, 10).until(
-    EC.element_to_be_clickable((By.CSS_SELECTOR, 'a.overlay'))
-)
+try:
+    photo_elem = WebDriverWait(driver, 3).until(
+        EC.presence_of_element_located((By.CSS_SELECTOR, 'a.overlay'))
+    )
+except TimeoutException:
+    photo_elem = driver.find_element_by_css_selector('a.overlay')
+    print('Timeout Exception was raised')
 photo_elem.click()
 
 # TODO: create folder in working directory
 n = 1
-path = os.path.join(os.getcwd, search_term + str(n))
-print(path)  # for testing
 while True:
-    if os.path.exists(path):
-        n += 1
-    else:
+    file_name = search_term + str(n)
+    if not os.path.exists(os.path.join(os.getcwd(), file_name)):
         break
-print(path)  # for testing
-#path = os.path.join(os.getcwd, search_term + str(n))
+    n += 1
+
+path = os.path.join(os.getcwd(), file_name)
 try:
     os.mkdir(path)
+    print('Created {} directory.'.format(os.path.basename(path)))
 except FileExistsError as e:
     print(e)
 
